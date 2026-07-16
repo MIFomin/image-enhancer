@@ -1,0 +1,19 @@
+{
+  "name": "image-enhancer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "postinstall": "node scripts/copy-wasm.js"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.17.0"
+  }
+}
