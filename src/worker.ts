@@ -3,6 +3,7 @@ import * as ort from 'onnxruntime-web';
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/';
 ort.env.wasm.numThreads = 1;
 
+
 const vertexShaderSource = `#version 300 es
 in vec2 a_position;
 in vec2 a_texCoord;
@@ -51,12 +52,10 @@ function checkCancel() {
 
 async function initORT() {
   if (mlSession) return;
+  const modelUrl = new URL('../model/model.onnx', import.meta.url);
+  const modelPath = modelUrl.href;
   
-  console.log('[ONNX] Загрузка модели...');
-  
-  const modelPath = (import.meta as any).env?.BASE_URL 
-    ? `${(import.meta as any).env.BASE_URL}model/model.onnx`
-    : '/model/model.onnx';
+  console.log('[ONNX] Загрузка модели из:', modelPath);
   
   mlSession = await ort.InferenceSession.create(modelPath, {
     executionProviders: ['wasm']

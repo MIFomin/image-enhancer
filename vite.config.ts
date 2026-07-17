@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/image-enhancer/',
+  base: './',
   
   build: {
     target: 'es2020',
