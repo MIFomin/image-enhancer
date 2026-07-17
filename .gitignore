@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+data/
+
+# Build
+dist/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# WASM кэш
+public/*.wasm
+public/*.mjs
+
+# Python (если есть папка с обучением)
+__pycache__/
+*.pyc
+*.pyo
+venv/
+python/models/
+python/saved_model_temp/
+tfjs_model/
