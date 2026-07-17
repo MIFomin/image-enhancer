@@ -53,7 +53,12 @@ async function initORT() {
   if (mlSession) return;
   
   console.log('[ONNX] Загрузка модели...');
-  mlSession = await ort.InferenceSession.create('/model/model.onnx', {
+  
+  const modelPath = (import.meta as any).env?.BASE_URL 
+    ? `${(import.meta as any).env.BASE_URL}model/model.onnx`
+    : '/model/model.onnx';
+  
+  mlSession = await ort.InferenceSession.create(modelPath, {
     executionProviders: ['wasm']
   });
   console.log('[ONNX] Модель загружена');
