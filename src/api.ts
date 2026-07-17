@@ -1,9 +1,11 @@
+import { heicTo } from 'heic-to';
+
 export type TaskStatus = 'pending' | 'decoding' | 'analyzing' | 'processing' | 'encoding' | 'completed' | 'cancelled' | 'error';
 
 export interface TaskProgress {
   taskId: string;
   status: TaskStatus;
-  progress: number; // 0 to 100
+  progress: number;
 }
 
 export interface CorrectionParams {
@@ -15,6 +17,7 @@ export interface CorrectionParams {
 export interface TaskResult {
   blob: Blob;
   params: CorrectionParams;
+  originalBlob: Blob;
 }
 
 interface TaskState {
@@ -22,6 +25,7 @@ interface TaskState {
   progress: number;
   blob?: Blob;
   params?: CorrectionParams;
+  originalBlob?: Blob;
   resolveResult?: (result: TaskResult) => void;
   rejectResult?: (err: Error) => void;
   resultPromise?: Promise<TaskResult>;
@@ -60,7 +64,11 @@ export class ImageEnhancer {
       task.progress = 100;
       task.blob = msg.blob;
       task.params = msg.params;
-      task.resolveResult?.({ blob: msg.blob, params: msg.params });
+      task.resolveResult?.({ 
+        blob: msg.blob, 
+        params: msg.params,
+        originalBlob: task.originalBlob!
+      });
       this.emit('statusChange', { 
         taskId: msg.taskId, 
         status: 'completed', 
@@ -78,7 +86,7 @@ export class ImageEnhancer {
     }
   }
 
-  async submitTask(image: Blob): Promise<string> {
+  async submitTask(image: File | Blob): Promise<string> {
     const taskId = `task_${++this.taskCounter}_${Date.now()}`;
     
     const taskState: TaskState = {
@@ -86,7 +94,6 @@ export class ImageEnhancer {
       progress: 0,
     };
 
-    // Создаём Promise для ожидания результата
     const resultPromise = new Promise<TaskResult>((resolve, reject) => {
       taskState.resolveResult = resolve;
       taskState.rejectResult = reject;
@@ -94,11 +101,33 @@ export class ImageEnhancer {
     
     taskState.resultPromise = resultPromise;
     this.tasks.set(taskId, taskState);
-
-    // Отправляем задачу в воркер
-    this.worker.postMessage({ type: 'start', taskId, image });
-
     this.emit('statusChange', { taskId, status: 'pending', progress: 0 });
+
+    try {
+      let imageToSend: Blob = image;
+      
+      if (image instanceof File) {
+        const fileName = image.name.toLowerCase();
+        const isHeic = fileName.endsWith('.heic') || fileName.endsWith('.heif');
+        
+        if (isHeic) {
+          console.log('[API] HEIC обнаружен, конвертирую через heic-to (PNG для избежания артефактов)...');
+          imageToSend = await heicTo({
+            blob: image,
+            type: 'image/png',
+            quality: 1.0  // Максимальное качество
+          });
+          console.log('[API] HEIC сконвертирован в PNG, размер:', imageToSend.size);
+        }
+      }
+
+      taskState.originalBlob = imageToSend;
+      this.worker.postMessage({ type: 'start', taskId, image: imageToSend });
+    } catch (err: any) {
+      taskState.rejectResult?.(err);
+      this.emit('statusChange', { taskId, status: 'error', progress: 0 });
+    }
+
     return taskId;
   }
 
@@ -122,16 +151,13 @@ export class ImageEnhancer {
     const task = this.tasks.get(taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
     
-    // Если результат уже получен — возвращаем сразу
-    if (task.blob && task.params) {
-      return { blob: task.blob, params: task.params };
+    if (task.blob && task.params && task.originalBlob) {
+      return { blob: task.blob, params: task.params, originalBlob: task.originalBlob };
     }
     
-    // Если задача завершилась с ошибкой
     if (task.status === 'error') throw new Error('Task failed');
     if (task.status === 'cancelled') throw new Error('Task cancelled');
     
-    // Иначе ждём завершения
     return task.resultPromise!;
   }
 

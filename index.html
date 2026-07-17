@@ -114,7 +114,7 @@
   <h2>Image Enhancer</h2>
   
   <div class="controls">
-    <input type="file" id="fileInput" accept="image/*">
+    <input type="file" id="fileInput" accept="image/*,.heic,.heif">
     <div id="status">Ожидание...</div>
   </div>
   
@@ -181,12 +181,9 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      // Показываем оригинал
-      const originalUrl = URL.createObjectURL(file);
-      originalImg.src = originalUrl;
-      
-      // Скрываем результаты от предыдущей обработки
       resultsDiv.classList.add('hidden');
+      originalImg.src = '';
+      resultImg.src = '';
       
       addLog(`Файл: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
       statusDiv.innerText = 'Запуск...';
@@ -196,11 +193,14 @@
         addLog(`Задача: ${taskId}`);
         
         const result = await enhancer.getResult(taskId);
-        const { blob, params } = result;
+        const { blob, params, originalBlob } = result;
         
         addLog(`Результат: ${(blob.size / 1024).toFixed(2)} KB`, 'success');
         
-        // Показываем результат
+        // Показываем оригинал (для HEIC это будет сконвертированный JPEG)
+        originalImg.src = URL.createObjectURL(originalBlob);
+        
+        // Показываем результат обработки
         resultImg.src = URL.createObjectURL(blob);
         
         // Показываем параметры
@@ -210,7 +210,6 @@
         
         addLog(`Параметры: B=${params.brightness.toFixed(3)}, C=${params.contrast.toFixed(3)}, S=${params.saturation.toFixed(3)}`, 'success');
         
-        // Показываем блок с результатами
         resultsDiv.classList.remove('hidden');
         statusDiv.innerText = 'Готово!';
         

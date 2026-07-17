@@ -1,28 +1,10 @@
-# Зависимости (устанавливаются через npm install)
+# Dependencies
 node_modules/
-venv/
+data/
 
-# Сборка
+# Build
 dist/
 .vite/
-
-# Данные и модели обучения (слишком большие)
-data/
-python/models/
-python/saved_model_temp/
-tfjs_model/
-saved_model_temp/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-.eggs/
 
 # IDE
 .vscode/
@@ -35,12 +17,19 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Логи
+# Logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# Временные файлы
-*.tmp
-*.temp
+# WASM кэш
+public/*.wasm
+public/*.mjs
+
+# Python (если есть папка с обучением)
+__pycache__/
+*.pyc
+*.pyo
+venv/
+python/models/
+python/saved_model_temp/
+tfjs_model/

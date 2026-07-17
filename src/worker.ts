@@ -1,6 +1,8 @@
 import * as ort from 'onnxruntime-web';
 
-// Встроенные шейдеры
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/';
+ort.env.wasm.numThreads = 1;
+
 const vertexShaderSource = `#version 300 es
 in vec2 a_position;
 in vec2 a_texCoord;
@@ -47,11 +49,8 @@ function checkCancel() {
   if (isCancelled) throw new Error('TASK_CANCELLED');
 }
 
-// Инициализация ONNX Runtime
 async function initORT() {
   if (mlSession) return;
-  
-  ort.env.wasm.numThreads = 1;
   
   console.log('[ONNX] Загрузка модели...');
   mlSession = await ort.InferenceSession.create('/model/model.onnx', {
@@ -60,19 +59,16 @@ async function initORT() {
   console.log('[ONNX] Модель загружена');
 }
 
-// ML-анализ через ONNX
 async function analyzeImageWithML(bitmap: ImageBitmap, taskId: string) {
   log(taskId, 'ONNX анализ изображения');
   
   await initORT();
   
-  // Рисуем изображение на offscreen canvas 64x64
   const analysisCanvas = new OffscreenCanvas(64, 64);
   const ctx = analysisCanvas.getContext('2d')!;
   ctx.drawImage(bitmap, 0, 0, 64, 64);
   const imageData = ctx.getImageData(0, 0, 64, 64);
   
-  // Преобразуем в Float32Array [1, 64, 64, 3] в диапазоне [0, 1]
   const pixels = new Float32Array(64 * 64 * 3);
   for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
     pixels[j] = imageData.data[i] / 255;
@@ -80,14 +76,9 @@ async function analyzeImageWithML(bitmap: ImageBitmap, taskId: string) {
     pixels[j + 2] = imageData.data[i + 2] / 255;
   }
   
-  // Создаем тензор
   const inputTensor = new ort.Tensor('float32', pixels, [1, 64, 64, 3]);
-  
-  // Запускаем инференс
   const feeds = { [mlSession!.inputNames[0]]: inputTensor };
   const results = await mlSession!.run(feeds);
-  
-  // Получаем результат
   const output = results[mlSession!.outputNames[0]].data as Float32Array;
   
   return {
@@ -97,7 +88,6 @@ async function analyzeImageWithML(bitmap: ImageBitmap, taskId: string) {
   };
 }
 
-// WebGL обработка
 async function processWithWebGL(bitmap: ImageBitmap, params: any, taskId: string, onProgress: (p: number) => void) {
   log(taskId, `Создание OffscreenCanvas ${bitmap.width}x${bitmap.height}`);
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
